@@ -5,6 +5,7 @@ import generateResponse from '../../genai';
 
 const Main = () => {
   const [input, setInput] = useState('');
+  const [lastPrompt, setLastPrompt] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isResponseGenerated, setIsResponseGenerated] = useState(false);
@@ -14,27 +15,38 @@ const Main = () => {
   const handleSend = async () => {
     if (!input.trim()) return;
 
+    const promptToSend = input;
+    setInput('');
     setOutput('');
     bufferRef.current = '';
     setLoading(true);
     setIsResponseGenerated(false);
 
     try {
-      await generateResponse(input, (chunk) => {
-        bufferRef.current += chunk;
+      await generateResponse(promptToSend, (chunk) => {
+        const cleanedChunk = chunk
+          .replace(/<\/?[^>]+(>|$)/g, '')
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        bufferRef.current += cleanedChunk;
 
         if (!typingIntervalRef.current) {
           typingIntervalRef.current = setInterval(() => {
             if (bufferRef.current.length > 0) {
-              setOutput((prev) => prev + bufferRef.current[0]);
+              const char = bufferRef.current[0];
               bufferRef.current = bufferRef.current.slice(1);
+              setOutput((prev) => prev + char);
             } else {
               clearInterval(typingIntervalRef.current);
               typingIntervalRef.current = null;
               setIsResponseGenerated(true);
               setLoading(false);
+              setLastPrompt(promptToSend);
             }
-          }, 20); // Typing speed
+          }, 20);
         }
       });
     } catch (error) {
@@ -54,36 +66,36 @@ const Main = () => {
   };
 
   return (
-    <div className='main'>
-      {/* Navbar */}
-      <div className='nav'>
+    <div className="main">
+      <div className="nav">
         <p>Gemini</p>
         <img src={assets.user_icon} alt="user" />
       </div>
 
       <div className="main-container">
-        {/* Chat response - visible after user input */}
         {(isResponseGenerated || loading) && (
           <div className="chat-output">
             <div className="chat-row-user">
               <img src={assets.user_icon} alt="User" />
-              <p>{input}</p>
+              <p>{lastPrompt}</p>
             </div>
 
             <div className="chat-row-ai">
               <img src={assets.gemini_icon} alt="AI" />
-              {loading
-              ?<div className='loader'>
-                     <hr />
-                     <hr />
-                     <hr />
+              {loading ? (
+                <div className="loader">
+                  <hr />
+                  <hr />
+                  <hr />
                 </div>
-                : <p className={`response ${loading ? 'typing' : ''}`}>{output}</p>}
+              ) : (
+                <p className="response">{output}</p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Greeting and Cards (only when no output) */}
+        {/* Show greetings and cards only if no response generated and not loading */}
         {!isResponseGenerated && !loading && (
           <>
             <div className="greet">
@@ -112,17 +124,19 @@ const Main = () => {
           </>
         )}
 
-        {/* Input + Disclaimer */}
         <div className="main-bottom">
           <div className="search-box">
             <input
               type="text"
-              placeholder="Enter a prompt here"
+              placeholder="Enter the prompt"
               value={input}
               onChange={handleInputChange}
               disabled={loading}
             />
-            <div onClick={handleSend} style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+            <div
+              onClick={handleSend}
+              style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
+            >
               <img src={assets.gallery_icon} alt="" />
               <img src={assets.mic_icon} alt="" />
               <img src={assets.send_icon} alt="Send" />
@@ -131,7 +145,8 @@ const Main = () => {
 
           {!isResponseGenerated && !loading && (
             <p className="bottom-info">
-              Gemini may display inaccurate info, including about people, so double-check its responses. Your privacy and Gemini Apps
+              Gemini may display inaccurate info, including about people, so
+              double-check its responses. Your privacy and Gemini Apps
             </p>
           )}
         </div>
