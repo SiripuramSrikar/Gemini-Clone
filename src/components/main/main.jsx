@@ -71,8 +71,14 @@ const Main = () => {
             </div>
 
             <div className="chat-row-ai">
-              <img src={assets.gemini_icon || assets.bulb_icon} alt="AI" />
-              <p className={`response ${loading ? 'typing' : ''}`}>{output}</p>
+              <img src={assets.gemini_icon} alt="AI" />
+              {loading
+              ?<div className='loader'>
+                     <hr />
+                     <hr />
+                     <hr />
+                </div>
+                : <p className={`response ${loading ? 'typing' : ''}`}>{output}</p>}
             </div>
           </div>
         )}
